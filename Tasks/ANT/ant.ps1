@@ -51,6 +51,7 @@ if(!$antBuildFile)
 # Import the Task.Common, Task.TestResults and Task.Internal dll that has all the cmdlets we need for Build
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.Internal"
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.Common"
+import-module "Microsoft.TeamFoundation.DistributedTask.Task.CodeCoverage"
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.TestResults"
 
 # Determine if ANT_HOME should be set by path provided by user
@@ -122,8 +123,6 @@ if($isCoverageEnabled)
 	}
 }
 
-
-
 $summaryFile = Join-Path $buildRootPath $reportDirectoryName 
 $summaryFile = Join-Path $summaryFile $summaryFileName
 # ensuring unique code coverage report task name by using guid
@@ -140,7 +139,7 @@ if($isCoverageEnabled)
 	# Enable code coverage in build file
 	if ($codeCoverageTool -eq "Cobertura")
 	{
-		$coberturaCCFile = Join-Path $buildRootPath "cobertura.cer"
+		$coberturaCCFile = Join-Path $buildRootPath "cobertura.ser"
 		if(Test-Path $coberturaCCFile)
 		{
 			# delete any previous cobertura code coverage file

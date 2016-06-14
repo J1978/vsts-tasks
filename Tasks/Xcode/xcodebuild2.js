@@ -125,7 +125,7 @@ function processInputs() {
 	var scheme = tl.getInput('scheme', false);
 	if(scheme) {
 		xcb.arg('-scheme');
-		xcb.arg('"' + tl.getInput('scheme', true) + '"');
+		xcb.arg(tl.getInput('scheme', true));
 	} else {
 		tl.debug('No scheme specified in task.');
 	}
@@ -161,12 +161,12 @@ function iosIdentity(code) {
 		.then(function(result) {
 			if(result.identity) {
 				// TODO: Add CODE_SIGN_IDENTITY[iphoneos*]? 
-				xcb.arg('CODE_SIGN_IDENTITY="' + result.identity + '"');
+				xcb.arg('CODE_SIGN_IDENTITY=' + result.identity);
 			} else {
 				tl.debug('No explicit signing identity specified in task.')
 			}
 			if(result.keychain) {
-				xcb.arg('OTHER_CODE_SIGN_FLAGS=--keychain="' + result.keychain + '"');
+				xcb.arg('OTHER_CODE_SIGN_FLAGS=--keychain=' + result.keychain);
 			}	
 			deleteKeychain = result.deleteCommand;
 		});
@@ -193,11 +193,7 @@ function execBuild(code) {
 	// Add optional additional args
 	var args=tl.getInput('args', false);			
 	if(args) {
-		xcb.arg(args);						
-	}
-	tl.debug('Complete build args: ');
-	for(var arg in xcb.args) {
-		tl.debug(xcb.args[arg]);
+		xcb.argString(args);						
 	}
 	return xcb.exec();	
 }

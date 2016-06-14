@@ -146,7 +146,13 @@ export function setResourcePath(path: string): void {
     }
 }
 
-export function loc(key: string, ...param: any[]): string {
+export function loc(key: string): string {
+    // we can't do ...param if we target ES6 and node 5.  This is what <=ES5 compiles down to.
+    var param = [];
+    for (var _i = 1; _i < arguments.length; _i++) {
+        param[_i - 1] = arguments[_i];
+    }
+
     if (!libResourceFileLoaded) {
         // merge loc strings from vsts-task-lib.
         var libResourceFile = path.join(__dirname, 'lib.json');
@@ -278,14 +284,14 @@ export function getPathInput(name: string, required?: boolean, check?: boolean):
 //-----------------------------------------------------
 
 export function getEndpointUrl(id: string, optional: boolean): string {
-    var urlval = process.env['ENDPOINT_URL_' + id];
+    var urlval = getVariable('ENDPOINT_URL_' + id);
+    debug(id + '=' + urlval);
 
     if (!optional && !urlval) {
         _writeError('Endpoint not present: ' + id);
         exit(1);
     }
 
-    debug(id + '=' + urlval);
     return urlval;
 }
 
@@ -298,13 +304,12 @@ export interface EndpointAuthorization {
 }
 
 export function getEndpointAuthorization(id: string, optional: boolean): EndpointAuthorization {
-    var aval = process.env['ENDPOINT_AUTH_' + id];
+    var aval = getVariable('ENDPOINT_AUTH_' + id);
+    debug(id + '=' + aval);
 
     if (!optional && !aval) {
         setResult(TaskResult.Failed, 'Endpoint not present: ' + id);
     }
-
-    debug(id + '=' + aval);
 
     var auth: EndpointAuthorization;
     try {
@@ -471,7 +476,11 @@ export function mkdirP(p): void {
 }
 
 export function which(tool: string, check?: boolean): string {
-    return mock.getResponse('which', tool);
+    var response = mock.getResponse('which', tool);
+    if (check) {
+        checkPath(response, tool);
+    }
+    return response;
 }
 
 export function cp(options, source: string, dest: string): void {
@@ -585,14 +594,14 @@ export class TestPublisher {
 
     public testRunner: string;
 
-    public publish(resultFiles, mergeResults, platform, config) {
-
-        if (mergeResults == 'true') {
-            _writeLine("Merging test results from multiple files to one test run is not supported on this version of build agent for OSX/Linux, each test result file will be published as a separate test run in VSO/TFS.");
-        }
+    public publish(resultFiles, mergeResults, platform, config, runTitle, publishRunAttachments) {
 
         var properties = <{ [key: string]: string }>{};
         properties['type'] = this.testRunner;
+
+        if (mergeResults) {
+            properties['mergeResults'] = mergeResults;
+        }
 
         if (platform) {
             properties['platform'] = platform;
@@ -602,9 +611,19 @@ export class TestPublisher {
             properties['config'] = config;
         }
 
-        for (var i = 0; i < resultFiles.length; i++) {
-            command('results.publish', properties, resultFiles[i]);
+        if (runTitle) {
+            properties['runTitle'] = runTitle;
         }
+
+        if (publishRunAttachments) {
+            properties['publishRunAttachments'] = publishRunAttachments;
+        }
+
+        if (resultFiles) {
+            properties['resultFiles'] = resultFiles;
+        }
+
+        command('results.publish', properties, '');
     }
 }
 
@@ -635,6 +654,25 @@ export class CodeCoveragePublisher {
         }
 
         command('codecoverage.publish', properties, "");        
+    }
+}
+
+//-----------------------------------------------------
+// Code coverage Publisher
+//-----------------------------------------------------
+export class CodeCoverageEnabler {
+    private buildTool: string;
+    private ccTool: string;
+
+    constructor(buildTool: string, ccTool: string) {
+        this.buildTool = buildTool;
+        this.ccTool = ccTool;
+    }
+
+    public enableCodeCoverage(buildProps: { [key: string]: string }) {
+        buildProps['buildtool'] = this.buildTool;
+        buildProps['codecoveragetool'] = this.ccTool;
+        command('codecoverage.enable', buildProps, "");
     }
 }
 

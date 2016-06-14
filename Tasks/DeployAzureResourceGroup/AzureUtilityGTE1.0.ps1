@@ -45,7 +45,7 @@ function Deploy-AzureResourceGroup
     }
     else
     {
-        $finalCommand = "`$azureResourceGroupDeployment = New-AzureRMResourceGroupDeployment -Name `"$deploymentName`" -ResourceGroupName `"$resourceGroupName`" -TemplateFile `"$csmFile`" -TemplateParameterFile `$csmParametersFile $overrideParameters -Verbose -ErrorAction silentlycontinue -ErrorVariable deploymentError"
+        $finalCommand = "`$azureResourceGroupDeployment = New-AzureRMResourceGroupDeployment -Name `"$deploymentName`" -ResourceGroupName `"$resourceGroupName`" -TemplateFile `"$csmFile`" -TemplateParameterFile `"$csmParametersFile`" $overrideParameters -Verbose -ErrorAction silentlycontinue -ErrorVariable deploymentError"
     }
     Write-Verbose "$finalCommand"
     Invoke-Expression -Command $finalCommand
@@ -148,7 +148,7 @@ function Get-AzureRMVMsInResourceGroup
         catch [Microsoft.WindowsAzure.Commands.Common.ComputeCloudException],[System.MissingMethodException], [System.Management.Automation.PSInvalidOperationException], [Hyak.Common.CloudException]
         {
             Write-Verbose $_.Exception.Message
-            throw (Get-LocalizedString -Key "Ensure resource group '{0}' exists and has atleast one virtual machine in it" -ArgumentList $resourceGroupName)
+            throw (Get-LocalizedString -Key "Ensure resource group '{0}' exists and has at least one virtual machine in it" -ArgumentList $resourceGroupName)
         }
         catch
         {

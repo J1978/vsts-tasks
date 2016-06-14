@@ -1,0 +1,59 @@
+{
+    "exec": {
+        "gradlew build": {
+            "code": 0,
+            "stdout": "Sample gradle output"
+        },
+        "gradlew properties": {
+            "code": 0,
+            "stdout": "subprojects: []",
+            "stderr": ""
+        },
+        "gradlew build jacocoTestReport": {
+            "code": 0,
+            "stdout": "Sample output",
+            "stderr": ""
+        },
+        "gradlew build cobertura": {
+            "code": 0,
+            "stdout": "Sample output",
+            "stderr": ""
+        },
+        "gradlew build FAIL": {
+            "code": 2,
+            "stderr": "FAILED"
+        },
+        "gradlew /o /p t i /o /n /s build": {
+            "code": 0,
+            "stdout": "More sample gradle output"
+        },
+        "gradlew /o /p t i /o /n /s build test deploy": {
+            "code": 0,
+            "stdout": "More sample gradle output"
+        }
+    },
+    "checkPath": {
+        "gradlew": true,
+        "/home/repo/src": true
+    },
+    "getVariable": {
+        "JAVA_HOME_8_X86": "/user/local/bin/Java8",
+        "System.DefaultWorkingDirectory": "/user/build"
+    },
+    "rmRF": {
+        "CCReport43F6D5EF": {
+            "success": true,
+            "message": "success"
+        }
+    },
+    "find": {
+        "/user/build": [
+            "/user/build/fun/test-123.xml"
+        ]
+    },
+    "match": {
+        "**/TEST-*.xml": [
+            "/user/build/fun/test-123.xml"
+        ]
+    }
+}

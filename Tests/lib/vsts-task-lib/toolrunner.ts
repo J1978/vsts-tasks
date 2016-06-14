@@ -4,6 +4,7 @@
 
 import Q = require('q');
 import os = require('os');
+import path = require('path');
 import events = require('events');
 import mock = require('./mock');
 
@@ -63,15 +64,59 @@ export class ToolRunner extends events.EventEmitter {
     }
 
     private _argStringToArray(argString: string): string[] {
-        var args = argString.match(/([^" ]*("[^"]*")[^" ]*)|[^" ]+/g);
-        //remove double quotes from each string in args as child_process.spawn() cannot handle literla quotes as part of arguments
-        for (var i = 0; i < args.length; i++) {
-            args[i] = args[i].replace(/"/g, "");
+        var args = [];
+
+        var inQuotes = false;
+        var escaped =false;
+        var arg = '';
+
+        var append = function(c) {
+            // we only escape double quotes.
+            if (escaped && c !== '"') {
+                arg += '\\';
+            }
+
+            arg += c;
+            escaped = false;
         }
+
+        for (var i=0; i < argString.length; i++) {
+            var c = argString.charAt(i);
+
+            if (c === '"') {
+                if (!escaped) {
+                    inQuotes = !inQuotes;
+                }
+                else {
+                    append(c);
+                }
+                continue;
+            }
+            
+            if (c === "\\" && inQuotes) {
+                escaped = true;
+                continue;
+            }
+
+            if (c === ' ' && !inQuotes) {
+                if (arg.length > 0) {
+                    args.push(arg);
+                    arg = '';
+                }
+                continue;
+            }
+
+            append(c);
+        }
+
+        if (arg.length > 0) {
+            args.push(arg.trim());
+        }
+
         return args;
     }
 
-    public arg(val: any, literal?: boolean) {
+    public arg(val: any) {
         if (!val) {
             return;
         }
@@ -81,20 +126,23 @@ export class ToolRunner extends events.EventEmitter {
             this.args = this.args.concat(val);
         }
         else if (typeof(val) === 'string') {
-            if(literal) {
-                this._debug(this.toolPath + ' literal arg: ' + val);
-                this.args = this.args.concat(val);
-            }
-            else {
-                this._debug(this.toolPath + ' arg: ' + val);
-                this.args = this.args.concat(this._argStringToArray(val));    
-            }
+            this._debug(this.toolPath + ' arg: ' + val);
+            this.args = this.args.concat(this._argStringToArray(val));
         }
+    }
+
+    public argString(val: string) {
+        if (!val) {
+            return;
+        }
+
+        this._debug(this.toolPath + ' arg: ' + val);
+        this.args = this.args.concat(this._argStringToArray(val));    
     }
 
     public pathArg(val: string) {
         this._debug(this.toolPath + ' pathArg: ' + val);
-        this.arg(val, true);
+        this.arg(val);
     }
     
     public argIf(condition: any, val: any) {
@@ -135,12 +183,19 @@ export class ToolRunner extends events.EventEmitter {
             cmdString += (' ' + argString);
         }
 
+        this._debug('ignoreTempPath=' + process.env['MOCK_IGNORE_TEMP_PATH']);
+        this._debug('tempPath=' + process.env['MOCK_TEMP_PATH']);
+        if (process.env['MOCK_IGNORE_TEMP_PATH'] === 'true') {
+            // Using split/join to replace the temp path
+            cmdString = cmdString.split(process.env['MOCK_TEMP_PATH']).join('');
+        }
+
         if (!ops.silent) {
             ops.outStream.write('[command]' + cmdString + os.EOL);
         }
 
         // TODO: filter process.env
-
+        
         var res = mock.getResponse('exec', cmdString);
         //console.log(JSON.stringify(res, null, 2));
         if (res.stdout) {

@@ -32,14 +32,14 @@ else {
 	var gt = tl.createToolRunner(grunt);
 }
 
-// optional - no tasks will concat nothing
-gt.arg(tl.getInput('targets', false));
+// optional - no targets will concat nothing
+gt.arg(tl.getDelimitedInput('targets', ' ', false));
 
 gt.arg('--gruntfile');
 
 gt.pathArg(gruntFile);
 
-gt.arg(tl.getInput('arguments', false));
+gt.argString(tl.getInput('arguments', false));
 
 gt.exec()
 .then(function(code) {

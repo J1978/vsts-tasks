@@ -1,8 +1,3 @@
-###############################################################################################
-### Note: This file should be kept in sync with the SonarQubeHelper.ps1 from the "end task"####
-###############################################################################################
-
-
 # When passing arguments to a process, the quotes need to be doubled and   
 # the entire string needs to be placed inside quotes to avoid issues with spaces  
 function EscapeArg  
@@ -22,14 +17,17 @@ function SetTaskContextVariable
 {
     param([string][ValidateNotNullOrEmpty()]$varName, 
           [string]$varValue)
-    
+        
+    #[Environment]::SetEnvironmentVariable($varName, $varValue)
     Write-Host "##vso[task.setvariable variable=$varName;]$varValue"
 }
 
 function GetTaskContextVariable()
 {
 	param([string][ValidateNotNullOrEmpty()]$varName)
-	return Get-TaskVariable -Context $distributedTaskContext -Name $varName
+        
+    #return ([Environment]::GetEnvironmentVariable($varName))
+	return Get-TaskVariable -Context $distributedTaskContext -Name $varName    
 }
 
 #
@@ -139,12 +137,13 @@ function RetryUntilTrue
     return $true;  
 }
 
+#
+# Invoke a SonarQube GET Rest API and fetch the response. This method uses the configured SonarQube server host url, as well as basic auth 
+# based on the user provided username / password 
+#
 function InvokeGetRestMethod
 {
-    param (
-        [Parameter(Mandatory=$true)][string]$query, 
-        [bool]$useAuth=$false)
-
+    param ([Parameter(Mandatory=$true)][string]$query)
                 
     $sonarQubeHostUrl = GetTaskContextVariable "MSBuild.SonarQube.HostUrl"     
     $sonarQubeHostUrl  = $sonarQubeHostUrl.TrimEnd("/");
@@ -152,18 +151,15 @@ function InvokeGetRestMethod
     Assert (![System.String]::IsNullOrWhiteSpace($sonarQubeHostUrl)) "Could not retrieve the SonarQube host url"
 
     $request = $sonarQubeHostUrl + $query;
-    
-    if ($useAuth)
-    {      
-       $authHeader = CreateBasicAuthHeaderFromEndpoint
+    $authHeader = CreateBasicAuthHeaderFromEndpoint
 
-       if (![String]::IsNullOrWhiteSpace($authHeader))
-       {
-            $allheaders = @{Authorization = $authHeader}        
-       }
-       
-    }  
+    if (![String]::IsNullOrWhiteSpace($authHeader))
+    {
+        $allheaders = @{Authorization = $authHeader}        
+    }
 
+    # Fix for HTTPS websites that support only TLS 1.2, as described by https://jira.sonarsource.com/browse/SONARMSBRU-169
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
     $response = Invoke-RestMethod -Uri $request -Method Get -Headers $allheaders
 
     return $response
@@ -200,6 +196,17 @@ function Assert
         throw $message
     }
 }
+
+#
+# Returns true if the input is not null and it has at least 1 element 
+#
+function HasElements
+{
+    param ([Array]$arr)
+    
+    return ($arr -ne $null) -and ($arr.Count -gt 0)
+}
+
 
 #
 # Returns true if this build was triggered in response to a PR
@@ -268,11 +275,50 @@ function IsFeatureEnabled
     return $enabledByDefault        
 }
 
+#
+# Exit if the build is a PR build and PRCA is not enabled
+#
 function ExitOnPRBuild
 {    
-    if ((IsPrBuild) -and !(IsFeatureEnabled "SQPullRequestBot" $false))
+    if ((IsPrBuild) -and !(IsFeatureEnabled "SQPullRequestBot" $true))
     {
-        Write-Host "SonarQube analysis is disabled during builds triggered by pull requests. Set a build variable named 'SQPullRequestBot' to 'true' to have the task post code analysis issues as comments in the PR. More information at http://go.microsoft.com/fwlink/?LinkID=786316"
+        Write-Host "SonarQube analysis is disabled because either this is a pull request build or because the flag SQPullRequestBot is set to false"
         exit
     } 
+}
+
+#
+# Compares the SonarQube server version with 5.2. Returns 0 is identical, >0 if greater, <0 if lower.
+# Note that 5.2 introduces the async analysis mode resulting in major API changes. 
+function CompareSonarQubeVersionWith52
+{
+    $versionString = GetOrFetchSonarQubeVersionString
+    
+    # Strip out '-SNAPSHOT' if it is present in version (developer versions of SonarQube might return version in this format: 5.2-SNAPSHOT)
+    $sqServerVersion = ([string]$versionString).split("-")[0]
+
+    $sqVersion = New-Object -TypeName System.Version -ArgumentList $sqServerVersion
+    $sqVersion5dot2 = New-Object -TypeName System.Version -ArgumentList "5.2"
+    
+    return $sqVersion.CompareTo($sqVersion5dot2)
+}
+
+#
+# Helper that returns the version number of the SonarQube server
+#
+function GetOrFetchSonarQubeVersionString
+{         
+    $versionString = GetTaskContextVariable "MSBuild.SonarQube.Internal.ServerVersion"
+    if ([String]::IsNullOrEmpty($versionString))
+    {
+         $command = {InvokeGetRestMethod "/api/server/version" }
+         $versionString = Retry $command -maxRetries 2 -retryDelay 1 -Verbose
+         SetTaskContextVariable "MSBuild.SonarQube.Internal.ServerVersion" $versionString
+    }
+    
+    Assert (![String]::IsNullOrEmpty($versionString)) "Could not retrieve the SonarQube server version"
+    
+    Write-Verbose "The SonarQube server version is $versionString"
+
+    return $versionString
 }

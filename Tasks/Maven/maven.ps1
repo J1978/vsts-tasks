@@ -21,7 +21,8 @@
     [string]$sqDbDetailsRequired,
     [string]$sqDbUrl,
     [string]$sqDbUsername,
-    [string]$sqDbPassword
+    [string]$sqDbPassword,
+    [string]$pmdAnalysisEnabled
 )
 
 Function CmdletHasMember($memberName) {
@@ -84,6 +85,13 @@ Write-Verbose "sqDbDetailsRequired = $sqDbDetailsRequired"
 Write-Verbose "dbUrl = $sqDbUrl"
 Write-Verbose "dbUsername = $sqDbUsername"
 
+# PMD analysis is not supported on Powershell, output a warning message
+if($pmdAnalysisEnabled)
+{
+    Write-Warning "PMD code analysis is not yet supported on Windows and hosted agents."
+    Write-Warning "Please use a dedicated Unix agent to enable this feature: https://github.com/Microsoft/vsts-agent"
+}
+
 # Verify Maven POM file is specified
 if(!$mavenPOMFile)
 {
@@ -94,6 +102,7 @@ if(!$mavenPOMFile)
 # Import the Task.Internal dll that has all the cmdlets we need for Build
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.Internal"
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.Common"
+import-module "Microsoft.TeamFoundation.DistributedTask.Task.CodeCoverage"
 import-module "Microsoft.TeamFoundation.DistributedTask.Task.TestResults"
 
 . ./mavenHelper.ps1

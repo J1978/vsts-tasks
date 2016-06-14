@@ -66,8 +66,8 @@ $sourcePath = $sourcePath.Trim('"')
 $storageAccount = $storageAccount.Trim()
 
 # azcopy location on automation agent
-$agentHomeDir = $env:AGENT_HOMEDIRECTORY
-$azCopyLocation = Join-Path $agentHomeDir -ChildPath "Agent\Worker\Tools\AzCopy"
+$azCopyExeLocation = Get-ToolPath -Name 'AzCopy\AzCopy.exe'
+$azCopyLocation = [System.IO.Path]::GetDirectoryName($azCopyExeLocation)
 
 # Import all the dlls and modules which have cmdlets we need
 Import-Module "Microsoft.TeamFoundation.DistributedTask.Task.Internal"
@@ -132,12 +132,12 @@ if ($destination -eq "AzureBlob")
     if(-not [string]::IsNullOrEmpty($outputStorageURI))
     {
         $storageAccountContainerURI = $storageContext.BlobEndPoint + $containerName
-        Write-Verbose "##vso[task.setvariable variable=$outputStorageURI;]$storageAccountContainerURI"
+        Write-Host "##vso[task.setvariable variable=$outputStorageURI;]$storageAccountContainerURI"
     }
     if(-not [string]::IsNullOrEmpty($outputStorageContainerSASToken))
     {
         $storageContainerSaSToken = New-AzureStorageContainerSASToken -Container $containerName -Context $storageContext -Permission r -ExpiryTime (Get-Date).AddHours($defaultSasTokenTimeOutInHours)
-        Write-Verbose "##vso[task.setvariable variable=$outputStorageContainerSASToken;]$storageContainerSasToken"
+        Write-Host "##vso[task.setvariable variable=$outputStorageContainerSASToken;]$storageContainerSasToken"
     }
     Write-Verbose "Completed Azure File Copy Task for Azure Blob Destination"
     return
@@ -161,7 +161,7 @@ try
         -storageAccountName $storageAccount -containerName $containerName -containerSasToken $containerSasToken -targetPath $targetPath -azCopyLocation $azCopyLocation `
         -resourceGroupName $environmentName -azureVMResourcesProperties $azureVMResourcesProperties -azureVMsCredentials $azureVMsCredentials `
         -cleanTargetBeforeCopy $cleanTargetBeforeCopy -communicationProtocol $useHttpsProtocolOption -skipCACheckOption $skipCACheckOption `
-        -enableDetailedLoggingString $enableDetailedLoggingString -additionalArguments $additionalArguments -copyFilesInParallel $copyFilesInParallel
+        -enableDetailedLoggingString $enableDetailedLoggingString -additionalArguments $additionalArguments -copyFilesInParallel $copyFilesInParallel -connectionType $connectionType
 }
 catch
 {

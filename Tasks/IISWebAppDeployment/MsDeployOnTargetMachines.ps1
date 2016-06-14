@@ -459,6 +459,11 @@ function Update-AppPool
         $appCmdArgs = [string]::Format('{0} /[name=''"{1}"''].processModel.identityType:SpecificUser /[name=''"{1}"''].processModel.userName:"{2}" /[name=''"{1}"''].processModel.password:"{3}"',`
                                 $appCmdArgs, $appPoolName, $userName, $password)
     }
+    elseif ($identity -eq "SpecificUser" -and -not [string]::IsNullOrWhiteSpace($userName))
+    {
+        $appCmdArgs = [string]::Format('{0} /[name=''"{1}"''].processModel.identityType:SpecificUser /[name=''"{1}"''].processModel.userName:"{2}"',`
+                                $appCmdArgs, $appPoolName, $userName)
+    }
     else
     {
         $appCmdArgs = [string]::Format('{0} /[name=''"{1}"''].processModel.identityType:{2}', $appCmdArgs, $appPoolName, $identity)
@@ -527,11 +532,11 @@ function Execute-Main
         [string]$WebDeployParamFile,
         [string]$OverRideParams,
         [string]$CreateWebSite,
-        [string]$WebsiteName,
-        [string]$WebsitePhysicalPath,
-        [string]$WebsitePhysicalPathAuth,
-        [string]$WebsiteAuthUserName,
-        [string]$WebsiteAuthUserPassword,
+        [string]$WebSiteName,
+        [string]$WebSitePhysicalPath,
+        [string]$WebSitePhysicalPathAuth,
+        [string]$WebSiteAuthUserName,
+        [string]$WebSiteAuthUserPassword,
         [string]$AddBinding,
         [string]$AssignDuplicateBinding,
         [string]$Protocol,
@@ -556,10 +561,10 @@ function Execute-Main
     Write-Verbose "OverRideParams = $OverRideParams"
 
     Write-Verbose "CreateWebSite= $CreateWebSite"
-    Write-Verbose "WebsiteName = $WebsiteName"
-    Write-Verbose "WebsitePhysicalPath = $WebsitePhysicalPath"
-    Write-Verbose "WebsitePhysicalPathAuth = $WebsitePhysicalPathAuth"
-    Write-Verbose "WebsiteAuthUserName = $WebsiteAuthUserName"
+    Write-Verbose "WebSiteName = $WebSiteName"
+    Write-Verbose "WebSitePhysicalPath = $WebSitePhysicalPath"
+    Write-Verbose "WebSitePhysicalPathAuth = $WebSitePhysicalPathAuth"
+    Write-Verbose "WebSiteAuthUserName = $WebSiteAuthUserName"
     Write-Verbose "WebSiteAuthUserPassword = $WebSiteAuthUserPassword"
     Write-Verbose "AddBinding = $AddBinding"
     Write-Verbose "AssignDuplicateBinding = $AssignDuplicateBinding"
